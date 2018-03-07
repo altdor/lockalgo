@@ -39,7 +39,6 @@
 #include <sys/syscall.h>
 #include <sys/time.h>
 #include <fcntl.h>
-#include <stdbool.h>
 #include "interpose.h"
 #include "utils.h"
 #define SUCCESS 0
@@ -49,27 +48,24 @@ extern __thread unsigned int cur_thread_id;
 listlock* findNodeWithThreadId(listlock_mutex_t *impl){
 	listlock* curr = impl->head->next;
 	listlock* obj;
-	bool found = false;
 	while(curr != impl->head){
 		if (curr->threadId == cur_thread_id){
-			found = true;
-			break;
+			return curr;
 		}
 		curr = curr->next;
 	}
-	if(!found){
-		obj = (listlock*)malloc(sizeof(listlock));
-		if (obj == NULL){
-			return FAILURE;
-		}
-		obj->flag = false;
-		obj->threadId = cur_thread_id;
-		obj->next = curr->next;
-		while(__sync_val_compare_and_swap(&curr->next, obj, obj->next) != obj){
-			obj->next = curr->next;
-		}
-		curr = obj;
+
+	obj = (listlock*)malloc(sizeof(listlock));
+	if (obj == NULL){
+		return NULL;
 	}
+	obj->flag = false;
+	obj->threadId = cur_thread_id;
+	obj->next = curr->next;
+	while(__sync_val_compare_and_swap(&curr->next, obj, obj->next) != obj){
+		obj->next = curr->next;
+	}
+	return obj;
 }
 
 int trylock(listlock* curr, listlock* lock){
@@ -83,9 +79,11 @@ int trylock(listlock* curr, listlock* lock){
 
 int listlock_mutex_lock(listlock_mutex_t *impl, listlock_context_t *UNUSED(me)) {
 	listlock* curr = findNodeWithThreadId(impl);
+	if(curr == NULL)
+		return FAILURE;
 	curr->flag = true;
 	while(true){
-		listlock* lock = impl->currnet;
+		listlock* lock = impl->current;
 		if(trylock(curr, lock) == SUCCESS)
 			return SUCCESS;
 	}
@@ -93,12 +91,12 @@ int listlock_mutex_lock(listlock_mutex_t *impl, listlock_context_t *UNUSED(me)) 
 
 int listlock_mutex_trylock(listlock_mutex_t *impl, listlock_context_t *UNUSED(me)) {
     listlock* curr = findNodeWithThreadId(impl);
-	listlock* lock = impl->currnet;
+	listlock* lock = impl->current;
 	return trylock(curr, lock);
 }
 void listlock_mutex_unlock(listlock_mutex_t *impl, listlock_context_t *UNUSED(me)) {
 	if(impl->current->threadId != cur_thread_id)
-		return FAILURE;
+		return;
 	impl->current->flag = false;
 	listlock* curr = impl->current->next;
 	while(curr != impl->current){
@@ -108,6 +106,7 @@ void listlock_mutex_unlock(listlock_mutex_t *impl, listlock_context_t *UNUSED(me
 		}
 	}
 	impl->current = NULL;
+	return;
 }
 
 int listlock_mutex_destroy(listlock_mutex_t *lock) {
@@ -117,7 +116,7 @@ int listlock_mutex_destroy(listlock_mutex_t *lock) {
 		next = curr->next;
 		free(curr);
 		curr = next;
-	while(lock->head != curr)
+	} while(lock->head != curr);
 }
 
 int listlock_cond_init(listlock_cond_t *cond, const pthread_condattr_t *attr) {
@@ -170,6 +169,7 @@ listlock_mutex_t *listlock_mutex_create(const pthread_mutexattr_t *attr) {
 	mutex->current = NULL;
 	mutex->head = (listlock*)malloc(sizeof(listlock));
 	if (mutex->head == NULL){
+		free(mutex);
 		return NULL;
 	}
 	mutex->head->next = mutex->head;

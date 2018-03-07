@@ -25,18 +25,20 @@
 #define __LISTLOCK_H__
 
 #include "padding.h"
+#include <stdbool.h>
+
 #define LOCK_ALGORITHM "listlock"
 #define NEED_CONTEXT 0
 #define SUPPORT_WAITING 1
 #define NO_INDIRECTION 1
 
-typedef pthread_mutex_t listlock_node{
+typedef struct listlock_node{
 	bool flag;
 	unsigned int threadId;
-	listlock_node* next;
+	struct listlock_node* next;
 } listlock;
 
-typedef pthread_mutex_t listlock{
+typedef struct{
 	listlock* current;
 	listlock* head;
 } listlock_mutex_t __attribute__((aligned(L_CACHE_LINE_SIZE)));
