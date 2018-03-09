@@ -125,6 +125,16 @@ int listlock_cond_init(listlock_cond_t *cond, const pthread_condattr_t *attr) {
     return REAL(pthread_cond_init)(cond, attr);
 }
 
+int listlock_cond_timedwait(listlock_cond_t *cond, listlock_mutex_t *lock,
+                            listlock_context_t *me, const struct timespec *ts) {
+	return -1;
+}
+
+int listlock_cond_wait(listlock_cond_t *cond, listlock_mutex_t *lock,
+                       listlock_context_t *me){
+	return -1;
+}
+
 int listlock_cond_signal(listlock_cond_t *cond) {
     return REAL(pthread_cond_signal)(cond);
 }
