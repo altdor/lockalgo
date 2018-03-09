@@ -29,8 +29,8 @@
 
 #define LOCK_ALGORITHM "listlock"
 #define NEED_CONTEXT 0
-#define SUPPORT_WAITING 1
-#define NO_INDIRECTION 1
+#define SUPPORT_WAITING 0
+#define NO_INDIRECTION 0
 
 typedef struct listlock_node{
 	bool flag;
@@ -52,10 +52,6 @@ int listlock_mutex_trylock(listlock_mutex_t *impl, listlock_context_t *me);
 void listlock_mutex_unlock(listlock_mutex_t *impl, listlock_context_t *me);
 int listlock_mutex_destroy(listlock_mutex_t *lock);
 int listlock_cond_init(listlock_cond_t *cond, const pthread_condattr_t *attr);
-int listlock_cond_timedwait(listlock_cond_t *cond, listlock_mutex_t *lock,
-                         listlock_context_t *me, const struct timespec *ts);
-int listlock_cond_wait(listlock_cond_t *cond, listlock_mutex_t *lock,
-                    listlock_context_t *me);
 int listlock_cond_signal(listlock_cond_t *cond);
 int listlock_cond_broadcast(listlock_cond_t *cond);
 int listlock_cond_destroy(listlock_cond_t *cond);
