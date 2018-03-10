@@ -34,7 +34,7 @@
 
 typedef struct listlock_node{
 	bool flag;
-	unsigned int threadId;
+	pthread_t threadId;
 	struct listlock_node* next;
 } listlock;
 

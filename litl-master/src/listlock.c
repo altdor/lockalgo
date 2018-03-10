@@ -43,67 +43,78 @@
 #include "utils.h"
 #define SUCCESS 0
 #define FAILURE -1
-extern __thread unsigned int cur_thread_id;
-// Posix functions
+
 listlock* findNodeWithThreadId(listlock_mutex_t *impl){
 	listlock* curr = impl->head->next;
 	listlock* obj;
+	
+	//search the list for a node referencing to this thread id
 	while(curr != impl->head){
-		if (curr->threadId == cur_thread_id){
+		if (curr->threadId == pthread_self()){
 			return curr;
 		}
 		curr = curr->next;
 	}
-
+	
+	/* if this thread is trying to lock the lock for the first time
+	 * create a new node referencing to it and add it to the list
+	 */
 	obj = (listlock*)malloc(sizeof(listlock));
 	if (obj == NULL){
 		return NULL;
 	}
+
 	obj->flag = false;
-	obj->threadId = cur_thread_id;
-	obj->next = curr->next;
-	while(__sync_val_compare_and_swap(&curr->next, obj, obj->next) != obj){
+	obj->threadId = pthread_self();
+	do {
 		obj->next = curr->next;
-	}
+	} while(!__sync_bool_compare_and_swap(&curr->next, obj->next, obj));
+	
 	return obj;
 }
 
-int trylock(listlock* curr, listlock* lock){
-	if(lock == curr || (lock == NULL && __sync_val_compare_and_swap(&lock, curr, NULL) == curr)){
+int trylock(listlock *curr, listlock_mutex_t *lock){
+	if(lock->current == curr || (lock->current == NULL && __sync_bool_compare_and_swap(&lock->current, NULL, curr)))
 		return SUCCESS;
-	}
-	else{
+	else
 		return FAILURE;
-	}
 }
 
 int listlock_mutex_lock(listlock_mutex_t *impl, listlock_context_t *UNUSED(me)) {
+
 	listlock* curr = findNodeWithThreadId(impl);
 	if(curr == NULL)
 		return FAILURE;
+	
 	curr->flag = true;
+	//MEMORY_BARRIER();
 	while(true){
-		listlock* lock = impl->current;
-		if(trylock(curr, lock) == SUCCESS)
+		if(trylock(curr, impl) == SUCCESS){
 			return SUCCESS;
+		}
 	}
 }
 
 int listlock_mutex_trylock(listlock_mutex_t *impl, listlock_context_t *UNUSED(me)) {
     listlock* curr = findNodeWithThreadId(impl);
-	listlock* lock = impl->current;
-	return trylock(curr, lock);
+	return trylock(curr, impl);
 }
 void listlock_mutex_unlock(listlock_mutex_t *impl, listlock_context_t *UNUSED(me)) {
-	if(impl->current->threadId != cur_thread_id)
+	
+	//if this thread doesn't own the lock return
+	if(impl->current->threadId != pthread_self())
 		return;
+
 	impl->current->flag = false;
+	//MEMORY_BARRIER();
 	listlock* curr = impl->current->next;
 	while(curr != impl->current){
 		if(curr->flag == true){
 			impl->current = curr;
+			//MEMORY_BARRIER();
 			return;
 		}
+		curr = curr->next;
 	}
 	impl->current = NULL;
 	return;
@@ -122,7 +133,7 @@ int listlock_mutex_destroy(listlock_mutex_t *lock) {
 }
 
 int listlock_cond_init(listlock_cond_t *cond, const pthread_condattr_t *attr) {
-    return REAL(pthread_cond_init)(cond, attr);
+    return -1;
 }
 
 int listlock_cond_timedwait(listlock_cond_t *cond, listlock_mutex_t *lock,
@@ -136,15 +147,15 @@ int listlock_cond_wait(listlock_cond_t *cond, listlock_mutex_t *lock,
 }
 
 int listlock_cond_signal(listlock_cond_t *cond) {
-    return REAL(pthread_cond_signal)(cond);
+    return -1;
 }
 
 int listlock_cond_broadcast(listlock_cond_t *cond) {
-    return REAL(pthread_cond_broadcast)(cond);
+    return -1;
 }
 
 int listlock_cond_destroy(listlock_cond_t *cond) {
-    return REAL(pthread_cond_destroy)(cond);
+    return -1;
 }
 
 void listlock_thread_start(void) {
