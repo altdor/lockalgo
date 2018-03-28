@@ -33,14 +33,16 @@
 #define NO_INDIRECTION 0
 
 typedef struct listlock_node{
-	bool flag;
-	pthread_t threadId;
+	volatile bool flag;
+	volatile pthread_t threadId;
 	struct listlock_node* volatile next;
-} listlock;
+	char __pad[pad_to_cache_line(sizeof(bool) + sizeof(pthread_t) + sizeof(struct listlock_node*))];
+} listlock_node_t __attribute__((aligned(L_CACHE_LINE_SIZE)));
 
-typedef struct{
-	listlock* current;
-	listlock* head;
+typedef struct listlock_mutex{
+	listlock_node_t* volatile owner;
+	listlock_node_t* volatile head;
+	char __pad[pad_to_cache_line(2 * sizeof(struct listlock_node_t*))];
 } listlock_mutex_t __attribute__((aligned(L_CACHE_LINE_SIZE)));
 
 typedef pthread_cond_t listlock_cond_t;

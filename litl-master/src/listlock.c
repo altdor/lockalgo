@@ -44,9 +44,9 @@
 #define SUCCESS 0
 #define FAILURE -1
 
-listlock* findNodeWithThreadId(listlock_mutex_t *impl){
-	listlock* curr = impl->head->next;
-	listlock* obj;
+listlock_node_t* findNodeWithThreadId(listlock_mutex_t *impl){
+	listlock_node_t* curr = impl->head->next;
+	listlock_node_t* obj;
 	
 	//search the list for a node referencing to this thread id
 	while(curr != impl->head){	
@@ -57,11 +57,11 @@ listlock* findNodeWithThreadId(listlock_mutex_t *impl){
 		}
 		curr = curr->next;
 	}
-	
+
 	/* if this thread is trying to lock the lock for the first time
 	 * create a new node referencing to it and add it to the list
 	 */
-	obj = (listlock*)malloc(sizeof(listlock));
+	obj = (listlock_node_t*)malloc(sizeof(listlock_node_t));
 	if (obj == NULL){
 		return NULL;
 	}
@@ -76,18 +76,18 @@ listlock* findNodeWithThreadId(listlock_mutex_t *impl){
 	return obj;
 }
 
-int trylock(listlock *curr, listlock_mutex_t *lock){
-	if(lock->current == NULL){
-		printf("lock current is null\n");
+int trylock(listlock_node_t *curr, listlock_mutex_t *lock){
+	if(lock->owner == NULL){
+		printf("lock owner is null\n");
 		fflush(NULL);
 	}
 	else{
-		if(lock->current == curr){
-			printf("current == curr");
+		if(lock->owner == curr){
+			printf("owner == curr");
 		}
 		fflush(NULL);
 	}
-	if(lock->current == curr || (lock->current == NULL && __sync_bool_compare_and_swap(&lock->current, NULL, curr)))
+	if(lock->owner == curr || (lock->owner == NULL && __sync_bool_compare_and_swap(&lock->owner, NULL, curr)))
 		return SUCCESS;
 	else
 		return FAILURE;
@@ -95,7 +95,7 @@ int trylock(listlock *curr, listlock_mutex_t *lock){
 
 int listlock_mutex_lock(listlock_mutex_t *impl, listlock_context_t *UNUSED(me)) {
 
-	listlock* curr = findNodeWithThreadId(impl);
+	listlock_node_t* curr = findNodeWithThreadId(impl);
 	if(curr == NULL)
 		return FAILURE;
 	
@@ -113,21 +113,21 @@ int listlock_mutex_lock(listlock_mutex_t *impl, listlock_context_t *UNUSED(me)) 
 }
 
 int listlock_mutex_trylock(listlock_mutex_t *impl, listlock_context_t *UNUSED(me)) {
-    listlock* curr = findNodeWithThreadId(impl);
+	listlock_node_t* curr = findNodeWithThreadId(impl);
 	return trylock(curr, impl);
 }
 void listlock_mutex_unlock(listlock_mutex_t *impl, listlock_context_t *UNUSED(me)) {
 	
 	//if this thread doesn't own the lock return
-	if(impl->current->threadId != pthread_self())
+	if(impl->owner->threadId != pthread_self())
 		return;
 
-	impl->current->flag = false;
+	impl->owner->flag = false;
 	MEMORY_BARRIER();
-	listlock* curr = impl->current->next;
-	while(curr != impl->current){
+	listlock_node_t* curr = impl->owner->next;
+	while(curr != impl->owner){
 		if(curr->flag == true){
-			impl->current = curr;
+			impl->owner = curr;
 			MEMORY_BARRIER();
 			printf("debug: unlock and pass to someone in queue\n");
 			fflush(NULL);
@@ -135,7 +135,7 @@ void listlock_mutex_unlock(listlock_mutex_t *impl, listlock_context_t *UNUSED(me
 		}
 		curr = curr->next;
 	}
-	impl->current = NULL;
+	impl->owner = NULL;
 	MEMORY_BARRIER();
 	printf("debug: unlock turned to null\n");
 			fflush(NULL);
@@ -143,8 +143,8 @@ void listlock_mutex_unlock(listlock_mutex_t *impl, listlock_context_t *UNUSED(me
 }
 
 int listlock_mutex_destroy(listlock_mutex_t *lock) {
-    listlock* curr = lock->head;
-	listlock* next;
+	listlock_node_t* curr = lock->head;
+	listlock_node_t* next;
 	do{
 		next = curr->next;
 		free(curr);
@@ -201,8 +201,8 @@ listlock_mutex_t *listlock_mutex_create(const pthread_mutexattr_t *attr) {
 	if (mutex == NULL){
 		return NULL;
 	}
-	mutex->current = NULL;
-	mutex->head = (listlock*)malloc(sizeof(listlock));
+	mutex->owner = NULL;
+	mutex->head = (listlock_node_t*)malloc(sizeof(listlock_node_t));
 	if (mutex->head == NULL){
 		free(mutex);
 		return NULL;
