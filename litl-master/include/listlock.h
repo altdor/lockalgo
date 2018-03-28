@@ -42,7 +42,7 @@ typedef struct listlock_node{
 typedef struct listlock_mutex{
 	listlock_node_t* volatile owner;
 	listlock_node_t* volatile head;
-	char __pad[pad_to_cache_line(2 * sizeof(struct listlock_node_t*))];
+	char __pad[pad_to_cache_line(2 * sizeof(listlock_node_t*))];
 } listlock_mutex_t __attribute__((aligned(L_CACHE_LINE_SIZE)));
 
 typedef pthread_cond_t listlock_cond_t;

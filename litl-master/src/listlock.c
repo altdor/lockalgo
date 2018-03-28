@@ -44,13 +44,16 @@
 #define SUCCESS 0
 #define FAILURE -1
 
+extern __thread unsigned int cur_thread_id;
+
 listlock_node_t* findNodeWithThreadId(listlock_mutex_t *impl){
+
 	listlock_node_t* curr = impl->head->next;
 	listlock_node_t* obj;
 	
 	//search the list for a node referencing to this thread id
 	while(curr != impl->head){	
-		if (curr->threadId == pthread_self()){
+		if (curr->threadId == cur_thread_id){
 			printf("debug: thread found");
 			fflush(NULL);
 			return curr;
@@ -67,7 +70,7 @@ listlock_node_t* findNodeWithThreadId(listlock_mutex_t *impl){
 	}
 
 	obj->flag = false;
-	obj->threadId = pthread_self();
+	obj->threadId = cur_thread_id;
 	MEMORY_BARRIER();
 	do {
 		obj->next = curr->next;
@@ -77,6 +80,7 @@ listlock_node_t* findNodeWithThreadId(listlock_mutex_t *impl){
 }
 
 int trylock(listlock_node_t *curr, listlock_mutex_t *lock){
+
 	if(lock->owner == NULL){
 		printf("lock owner is null\n");
 		fflush(NULL);
@@ -113,13 +117,14 @@ int listlock_mutex_lock(listlock_mutex_t *impl, listlock_context_t *UNUSED(me)) 
 }
 
 int listlock_mutex_trylock(listlock_mutex_t *impl, listlock_context_t *UNUSED(me)) {
+
 	listlock_node_t* curr = findNodeWithThreadId(impl);
 	return trylock(curr, impl);
 }
 void listlock_mutex_unlock(listlock_mutex_t *impl, listlock_context_t *UNUSED(me)) {
-	
+
 	//if this thread doesn't own the lock return
-	if(impl->owner->threadId != pthread_self())
+	if(impl->owner->threadId != cur_thread_id)
 		return;
 
 	impl->owner->flag = false;
@@ -129,7 +134,7 @@ void listlock_mutex_unlock(listlock_mutex_t *impl, listlock_context_t *UNUSED(me
 		if(curr->flag == true){
 			impl->owner = curr;
 			MEMORY_BARRIER();
-			printf("debug: unlock and pass to someone in queue\n");
+			printf("debug: unlock and pass to someone in queue (%d)\n", (int)curr->threadId);
 			fflush(NULL);
 			return;
 		}
@@ -143,6 +148,7 @@ void listlock_mutex_unlock(listlock_mutex_t *impl, listlock_context_t *UNUSED(me
 }
 
 int listlock_mutex_destroy(listlock_mutex_t *lock) {
+
 	listlock_node_t* curr = lock->head;
 	listlock_node_t* next;
 	do{
@@ -197,7 +203,8 @@ void listlock_init_context(lock_mutex_t *UNUSED(impl),
 }
 
 listlock_mutex_t *listlock_mutex_create(const pthread_mutexattr_t *attr) {
-    listlock_mutex_t * mutex = (listlock_mutex_t*)alloc_cache_align(sizeof(listlock_mutex_t));
+
+	listlock_mutex_t * mutex = (listlock_mutex_t*)alloc_cache_align(sizeof(listlock_mutex_t));
 	if (mutex == NULL){
 		return NULL;
 	}
@@ -208,6 +215,8 @@ listlock_mutex_t *listlock_mutex_create(const pthread_mutexattr_t *attr) {
 		return NULL;
 	}
 	mutex->head->next = mutex->head;
+	mutex->head->threadId = -1;
+	mutex->head->flag = false;
 	MEMORY_BARRIER();
     return mutex;
 }
