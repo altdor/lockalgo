@@ -46,52 +46,9 @@
 
 extern __thread unsigned int cur_thread_id;
 
-listlock_node_t* findNodeWithThreadId(listlock_mutex_t *impl){
+int trylock(listlock_mutex_t *lock){
 
-	listlock_node_t* curr = impl->head->next;
-	listlock_node_t* obj;
-	
-	//search the list for a node referencing to this thread id
-	while(curr != impl->head){	
-		if (curr->threadId == cur_thread_id){
-			printf("debug: thread found");
-			fflush(NULL);
-			return curr;
-		}
-		curr = curr->next;
-	}
-
-	/* if this thread is trying to lock the lock for the first time
-	 * create a new node referencing to it and add it to the list
-	 */
-	obj = (listlock_node_t*)malloc(sizeof(listlock_node_t));
-	if (obj == NULL){
-		return NULL;
-	}
-
-	obj->flag = false;
-	obj->threadId = cur_thread_id;
-	MEMORY_BARRIER();
-	do {
-		obj->next = curr->next;
-	} while(!__sync_bool_compare_and_swap(&curr->next, obj->next, obj));
-	
-	return obj;
-}
-
-int trylock(listlock_node_t *curr, listlock_mutex_t *lock){
-
-	if(lock->owner == NULL){
-		printf("lock owner is null\n");
-		fflush(NULL);
-	}
-	else{
-		if(lock->owner == curr){
-			printf("owner == curr");
-		}
-		fflush(NULL);
-	}
-	if(lock->owner == curr || (lock->owner == NULL && __sync_bool_compare_and_swap(&lock->owner, NULL, curr)))
+	if(lock->owner == cur_thread_id || (lock->owner == NO_OWNER && __sync_bool_compare_and_swap(&lock->owner, NO_OWNER, cur_thread_id)))
 		return SUCCESS;
 	else
 		return FAILURE;
@@ -99,18 +56,18 @@ int trylock(listlock_node_t *curr, listlock_mutex_t *lock){
 
 int listlock_mutex_lock(listlock_mutex_t *impl, listlock_context_t *UNUSED(me)) {
 
-	listlock_node_t* curr = findNodeWithThreadId(impl);
-	if(curr == NULL)
+	if(cur_thread_id > impl->currentListSize - 1){
+		printf("need to resize array\n");
 		return FAILURE;
+	}else if(cur_thread_id > impl->activeThreadCount - 1){
+		impl->activeThreadCount = cur_thread_id + 1;
+	}
 	
-	curr->flag = true;
+	impl->arrayList[cur_thread_id].flag = true;
 	MEMORY_BARRIER();
+	
 	while(true){
-		//printf("debug: trying to lock \n");
-		//fflush(NULL);
-		if(trylock(curr, impl) == SUCCESS){
-			printf("debug: locked\n");
-			fflush(NULL);
+		if(trylock(impl) == SUCCESS){
 			return SUCCESS;
 		}
 	}
@@ -118,44 +75,45 @@ int listlock_mutex_lock(listlock_mutex_t *impl, listlock_context_t *UNUSED(me)) 
 
 int listlock_mutex_trylock(listlock_mutex_t *impl, listlock_context_t *UNUSED(me)) {
 
-	listlock_node_t* curr = findNodeWithThreadId(impl);
-	return trylock(curr, impl);
+	if(cur_thread_id > impl->currentListSize - 1){
+		printf("need to resize array\n");
+		return FAILURE;
+	}else if(cur_thread_id > impl->activeThreadCount - 1){
+		impl->activeThreadCount = cur_thread_id + 1;
+	}
+	MEMORY_BARRIER();
+
+	return trylock(impl);
 }
 void listlock_mutex_unlock(listlock_mutex_t *impl, listlock_context_t *UNUSED(me)) {
 
+	int i, curr;
+	size_t arrayLength = impl->activeThreadCount;
+	
 	//if this thread doesn't own the lock return
-	if(impl->owner->threadId != cur_thread_id)
+	if(impl->owner != cur_thread_id)
 		return;
 
-	impl->owner->flag = false;
+	impl->arrayList[impl->owner].flag = false;
 	MEMORY_BARRIER();
-	listlock_node_t* curr = impl->owner->next;
-	while(curr != impl->owner){
-		if(curr->flag == true){
+	
+	for(i = 1; i < arrayLength; i++){
+		curr = (i + cur_thread_id) % arrayLength;
+		if(impl->arrayList[curr].flag == true){
 			impl->owner = curr;
 			MEMORY_BARRIER();
-			printf("debug: unlock and pass to someone in queue (%d)\n", (int)curr->threadId);
-			fflush(NULL);
 			return;
 		}
-		curr = curr->next;
 	}
-	impl->owner = NULL;
+	impl->owner = NO_OWNER;
 	MEMORY_BARRIER();
-	printf("debug: unlock turned to null\n");
-			fflush(NULL);
+
 	return;
 }
 
 int listlock_mutex_destroy(listlock_mutex_t *lock) {
 
-	listlock_node_t* curr = lock->head;
-	listlock_node_t* next;
-	do{
-		next = curr->next;
-		free(curr);
-		curr = next;
-	} while(lock->head != curr);
+	free(lock->arrayList);
 	free(lock);
 	return 0;
 }
@@ -204,19 +162,25 @@ void listlock_init_context(lock_mutex_t *UNUSED(impl),
 
 listlock_mutex_t *listlock_mutex_create(const pthread_mutexattr_t *attr) {
 
-	listlock_mutex_t * mutex = (listlock_mutex_t*)alloc_cache_align(sizeof(listlock_mutex_t));
+	int i;
+
+	listlock_mutex_t *mutex = (listlock_mutex_t*)alloc_cache_align(sizeof(listlock_mutex_t));
 	if (mutex == NULL){
 		return NULL;
 	}
-	mutex->owner = NULL;
-	mutex->head = (listlock_node_t*)malloc(sizeof(listlock_node_t));
-	if (mutex->head == NULL){
+
+	mutex->owner = NO_OWNER;
+	mutex->currentListSize = INITIAL_ARRAY_LENGTH;
+	mutex->activeThreadCount = 0;
+	mutex->arrayList = (listlock_node_t*)alloc_cache_align(INITIAL_ARRAY_LENGTH * sizeof(listlock_node_t));
+	if (mutex->arrayList == NULL){
 		free(mutex);
 		return NULL;
 	}
-	mutex->head->next = mutex->head;
-	mutex->head->threadId = -1;
-	mutex->head->flag = false;
+	
+	for(i = 0; i < INITIAL_ARRAY_LENGTH; i++)
+		mutex->arrayList[i].flag = false;
+
 	MEMORY_BARRIER();
     return mutex;
 }

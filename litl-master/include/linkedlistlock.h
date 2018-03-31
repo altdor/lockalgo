@@ -21,13 +21,13 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
-#ifndef __LISTLOCK_H__
-#define __LISTLOCK_H__
+#ifndef __LINKEDLISTLOCK_H__
+#define __LINKEDLISTLOCK_H__
 
 #include "padding.h"
 #include <stdbool.h>
 
-#define LOCK_ALGORITHM "LISTLOCK"
+#define LOCK_ALGORITHM "LINKEDLISTLOCK"
 #define NEED_CONTEXT 0
 #define SUPPORT_WAITING 0
 #define NO_INDIRECTION 0
@@ -87,4 +87,4 @@ typedef listlock_cond_t lock_cond_t;
 #define lock_application_exit listlock_application_exit
 #define lock_init_context listlock_init_context
 
-#endif // __listlock_H__
+#endif // __linkedlistlock_H__

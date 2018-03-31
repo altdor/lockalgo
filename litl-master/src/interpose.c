@@ -87,8 +87,10 @@
 #include <partitioned.h>
 #elif defined(MUTEXEE)
 #include <mutexee.h>
-#elif defined(LISTLOCK)
-#include <listlock.h>
+#elif defined(LINKEDLISTLOCK)
+#include <linkedlistlock.h>
+#elif defined(ARRAYLISTLOCK)
+#include <arraylistlock.h>
 #else
 #error "No lock algorithm known"
 #endif
