@@ -263,7 +263,6 @@ static void __attribute__((constructor)) REAL(interpose_init)(void) {
         return;
     }
 
-    printf("Using Lib%s with waiting %s\n", LOCK_ALGORITHM, WAITING_POLICY);
 #if !NO_INDIRECTION
     pthread_to_lock = clht_create(NUM_BUCKETS);
     assert(pthread_to_lock != NULL);

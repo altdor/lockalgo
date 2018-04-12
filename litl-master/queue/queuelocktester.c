@@ -6,12 +6,10 @@
 #include <time.h>
 #include "queue.h"
 
-#define NUMBER_OF_THREADS 16
-#define NUMBER_OF_EXECUTIONS 10000000
-
 #define SUCCESS 0
 #define FAILURE -1
 
+volatile int numberOfOperations; 
 void *do_thread_work(void *queueptr){
 
 	int i, ran, tmp, j = 0;
@@ -21,7 +19,7 @@ void *do_thread_work(void *queueptr){
 	
 	srand((unsigned) time(&t));
 	
-	for (i = 0; i < NUMBER_OF_EXECUTIONS; i++){
+	for (i = 0; i < numberOfOperations; i++){
 		ran = rand();
 		if((ran % 2) == 0){
 			enqueue(queue, j);
@@ -34,11 +32,17 @@ void *do_thread_work(void *queueptr){
 
 int main(int argc, char **argv){
 
-	int i;
+	int i, numberOfThreads;
 	clock_t begin, end;
 	Queue *queue;
 	
-	pthread_t threadArray[NUMBER_OF_THREADS];
+	if(argc != 3)
+		printf("usage ...........");
+	
+	numberOfThreads = atoi(argv[1]);
+	numberOfOperations = atoi(argv[2]);
+	
+	pthread_t threadArray[numberOfThreads];
 
 	queue = queue_create(); 
 	if(queue == NULL){
@@ -48,14 +52,14 @@ int main(int argc, char **argv){
 	
 	begin = clock();
 
-	for(i = 0; i < NUMBER_OF_THREADS; i++){
+	for(i = 0; i < numberOfThreads; i++){
 		if(pthread_create(&(threadArray[i]), NULL, do_thread_work, queue)){
 			fprintf(stderr, "Error creating thread\n");
 			return FAILURE;
 		}
 	}
 
-	for(i = 0; i < NUMBER_OF_THREADS; i++){
+	for(i = 0; i < numberOfThreads; i++){
 		if(pthread_join(threadArray[i], NULL)){
 			fprintf(stderr, "Error joining thread\n");
 			return FAILURE;
@@ -64,7 +68,7 @@ int main(int argc, char **argv){
 
 	end = clock();
 	
-	printf("execution took %ld us\n", end - begin);
+	printf("execution time %ld us\n", end - begin);
 
 	if(queue_destroy(queue) == FAILURE){
 		fprintf(stderr, "Error destroying lock\n");
