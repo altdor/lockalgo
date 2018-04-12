@@ -41,10 +41,55 @@
 #include <fcntl.h>
 #include "interpose.h"
 #include "utils.h"
+
 #define SUCCESS 0
 #define FAILURE -1
 
 extern __thread unsigned int cur_thread_id;
+
+void resizeArray(listlock_mutex_t *impl){
+	
+	listlock_node_t** volatile newArrayList;
+	int newSize, i;
+	
+	for(newSize = 1; cur_thread_id > newSize - 1; newSize*=2);
+
+	newArrayList = (listlock_node_t**)malloc(newSize * sizeof(listlock_node_t*));
+	
+	for(i = 0; i <= impl->currentListSize; i++)
+		newArrayList[i] = impl->arrayList[i];
+	for(i = impl->currentListSize; i < newSize; i++)
+		newArrayList[i] = NULL;
+	
+	impl->arrayList = newArrayList;
+	impl->currentListSize = newSize;
+	impl->resizeInProgress = false;
+}
+
+void verifyNodeExist(listlock_mutex_t *impl){
+	
+	int activeThreadCount;
+	
+	while(cur_thread_id > impl->currentListSize - 1){
+		if(__sync_bool_compare_and_swap(&impl->resizeInProgress, false, true))
+			resizeArray(impl);
+		else
+			while(impl->resizeInProgress);
+	}
+	
+	while(true){
+		activeThreadCount = impl->activeThreadCount;
+		if(activeThreadCount - 1 < (int)cur_thread_id)
+			__sync_bool_compare_and_swap(&impl->activeThreadCount, activeThreadCount, (int)cur_thread_id + 1);
+		else
+			break;
+	}
+	
+	if(impl->arrayList[cur_thread_id] == NULL){
+		impl->arrayList[cur_thread_id] = (listlock_node_t*)malloc(sizeof(listlock_node_t));
+		impl->arrayList[cur_thread_id]->flag = false;
+	}
+}
 
 int trylock(listlock_mutex_t *lock){
 
@@ -56,15 +101,10 @@ int trylock(listlock_mutex_t *lock){
 
 int listlock_mutex_lock(listlock_mutex_t *impl, listlock_context_t *UNUSED(me)) {
 
-	if(cur_thread_id > impl->currentListSize - 1){
-		printf("need to resize array\n");
-		return FAILURE;
-	}else if(cur_thread_id > impl->activeThreadCount - 1){
-		impl->activeThreadCount = cur_thread_id + 1;
-	}
+	verifyNodeExist(impl);
 	
-	impl->arrayList[cur_thread_id].flag = true;
-	MEMORY_BARRIER();
+	impl->arrayList[cur_thread_id]->flag = true;
+	//MEMORY_BARRIER();
 	
 	while(true){
 		if(trylock(impl) == SUCCESS){
@@ -75,44 +115,44 @@ int listlock_mutex_lock(listlock_mutex_t *impl, listlock_context_t *UNUSED(me)) 
 
 int listlock_mutex_trylock(listlock_mutex_t *impl, listlock_context_t *UNUSED(me)) {
 
-	if(cur_thread_id > impl->currentListSize - 1){
-		printf("need to resize array\n");
-		return FAILURE;
-	}else if(cur_thread_id > impl->activeThreadCount - 1){
-		impl->activeThreadCount = cur_thread_id + 1;
-	}
-	MEMORY_BARRIER();
+	verifyNodeExist(impl);
+	//MEMORY_BARRIER();
 
 	return trylock(impl);
 }
 void listlock_mutex_unlock(listlock_mutex_t *impl, listlock_context_t *UNUSED(me)) {
 
 	int i, curr;
-	size_t arrayLength = impl->activeThreadCount;
+	int arrayLength = impl->activeThreadCount;
 	
 	//if this thread doesn't own the lock return
 	if(impl->owner != cur_thread_id)
 		return;
 
-	impl->arrayList[impl->owner].flag = false;
-	MEMORY_BARRIER();
+	impl->arrayList[impl->owner]->flag = false;
+	//MEMORY_BARRIER();
 	
 	for(i = 1; i < arrayLength; i++){
 		curr = (i + cur_thread_id) % arrayLength;
-		if(impl->arrayList[curr].flag == true){
+		if(impl->arrayList[curr] != NULL && impl->arrayList[curr]->flag == true){
 			impl->owner = curr;
-			MEMORY_BARRIER();
+			//MEMORY_BARRIER();
 			return;
 		}
 	}
 	impl->owner = NO_OWNER;
-	MEMORY_BARRIER();
+	//MEMORY_BARRIER();
 
 	return;
 }
 
 int listlock_mutex_destroy(listlock_mutex_t *lock) {
 
+	int i;
+
+	for(i = 0; i < lock->activeThreadCount - 1;i++){
+		free(lock->arrayList[i]);
+	}
 	free(lock->arrayList);
 	free(lock);
 	return 0;
@@ -172,16 +212,17 @@ listlock_mutex_t *listlock_mutex_create(const pthread_mutexattr_t *attr) {
 	mutex->owner = NO_OWNER;
 	mutex->currentListSize = INITIAL_ARRAY_LENGTH;
 	mutex->activeThreadCount = 0;
-	mutex->arrayList = (listlock_node_t*)alloc_cache_align(INITIAL_ARRAY_LENGTH * sizeof(listlock_node_t));
+	mutex->resizeInProgress = false;
+	mutex->arrayList = (listlock_node_t**)alloc_cache_align(INITIAL_ARRAY_LENGTH * sizeof(listlock_node_t*));
 	if (mutex->arrayList == NULL){
 		free(mutex);
 		return NULL;
 	}
 	
 	for(i = 0; i < INITIAL_ARRAY_LENGTH; i++)
-		mutex->arrayList[i].flag = false;
+		mutex->arrayList[i] = NULL;
 
-	MEMORY_BARRIER();
+	//MEMORY_BARRIER();
     return mutex;
 }
 
