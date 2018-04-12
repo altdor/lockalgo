@@ -33,7 +33,7 @@
 #define NO_INDIRECTION 0
 #define NO_OWNER -1
 
-#define INITIAL_ARRAY_LENGTH 100
+#define INITIAL_ARRAY_LENGTH 200
 
 typedef struct listlock_node{
 	volatile bool flag;
