@@ -59,12 +59,17 @@ int listlock_mutex_lock(listlock_mutex_t *impl, listlock_context_t *UNUSED(me)) 
 	if(cur_thread_id > impl->currentListSize - 1){
 		printf("need to resize array\n");
 		return FAILURE;
-	}else if(cur_thread_id > impl->activeThreadCount - 1){
-		impl->activeThreadCount = cur_thread_id + 1;
+	}
+	
+	while(true){
+		int activeThreadCount = impl->activeThreadCount;
+		if(activeThreadCount - 1 < (int)cur_thread_id)
+			__sync_bool_compare_and_swap(&impl->activeThreadCount, activeThreadCount, (int)cur_thread_id + 1);
+		else
+			break;
 	}
 	
 	impl->arrayList[cur_thread_id].flag = true;
-	MEMORY_BARRIER();
 	
 	while(true){
 		if(trylock(impl) == SUCCESS){
@@ -81,7 +86,6 @@ int listlock_mutex_trylock(listlock_mutex_t *impl, listlock_context_t *UNUSED(me
 	}else if(cur_thread_id > impl->activeThreadCount - 1){
 		impl->activeThreadCount = cur_thread_id + 1;
 	}
-	MEMORY_BARRIER();
 
 	return trylock(impl);
 }
@@ -95,18 +99,15 @@ void listlock_mutex_unlock(listlock_mutex_t *impl, listlock_context_t *UNUSED(me
 		return;
 
 	impl->arrayList[impl->owner].flag = false;
-	MEMORY_BARRIER();
 	
 	for(i = 1; i < arrayLength; i++){
 		curr = (i + cur_thread_id) % arrayLength;
 		if(impl->arrayList[curr].flag == true){
 			impl->owner = curr;
-			MEMORY_BARRIER();
 			return;
 		}
 	}
 	impl->owner = NO_OWNER;
-	MEMORY_BARRIER();
 
 	return;
 }
@@ -181,7 +182,6 @@ listlock_mutex_t *listlock_mutex_create(const pthread_mutexattr_t *attr) {
 	for(i = 0; i < INITIAL_ARRAY_LENGTH; i++)
 		mutex->arrayList[i].flag = false;
 
-	MEMORY_BARRIER();
     return mutex;
 }
 

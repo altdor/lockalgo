@@ -68,7 +68,7 @@ int main(int argc, char **argv){
 
 	end = clock();
 	
-	printf("execution time %ld us\n", end - begin);
+	printf("throughput: %ld operations/sec\n", (CLOCKS_PER_SEC * numberOfThreads * numberOfOperations)/(end - begin));
 
 	if(queue_destroy(queue) == FAILURE){
 		fprintf(stderr, "Error destroying lock\n");
