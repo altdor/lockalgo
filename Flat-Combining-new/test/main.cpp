@@ -73,7 +73,7 @@ static tick_t volatile *		_gThreadResultAry;
 static int						_gNumProcessors;
 	   int						_gNumThreads;
 static int						_gThroughputTime;
-static int 						_totalTime
+static int 						_totalTime;
 static Thread**					_gThreads;
 static AtomicInteger			_gThreadStartCounter(0);
 static AtomicInteger			_gThreadEndCounter(0);
@@ -109,20 +109,17 @@ public:
 	MixThread (final int inThreadNo) : _threadNo(inThreadNo) {}
 
 	void run() {
-		final int start_counter = _gThreadStartCounter.getAndIncrement();
 		int i, ran, tmp, j = 0;
 		time_t t;
-		int iNumAdd = start_counter*1024;
-		int iNumRemove = start_counter*1024;
+
 		srand((unsigned) time(&t));
-		final int start_counter = _gThreadStartCounter.getAndIncrement();
 		for (i = 0; i < 100000; i++){
 			ran = rand();
 			if((ran % 2) == 0){
-				_gDS[iDb]->add(_threadNo, _gRandNumAry[iNumAdd]);
+				_gDS[0]->add(_threadNo,ran);
 				j++;
 			} else{
-				temp = _gDS[iDb]->remove(_threadNo, _gRandNumAry[iNumRemove]);
+				tmp = _gDS[0]->remove(_threadNo,ran);
 			}
 		}
 	}
