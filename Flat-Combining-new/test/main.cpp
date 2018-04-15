@@ -61,7 +61,7 @@ static final int _ACTIONS_ARY_SIZE = 2*1024*1024;
 static int						_num_ds;
 static ITest*					_gDS[1024];
 static Configuration			_gConfiguration;
-
+static int 	numberOfOperations = 100000;
 static Random					_gRand;
 static int						_gActionAry[_ACTIONS_ARY_SIZE];
 static int						_gTotalRandNum;
@@ -113,7 +113,7 @@ public:
 		time_t t;
 
 		srand((unsigned) time(&t));
-		for (i = 0; i < 100000; i++){
+		for (i = 0; i < numberOfOperations; i++){
 			ran = rand();
 			if((ran % 2) == 0){
 				_gDS[0]->add(_threadNo,ran);
@@ -184,7 +184,7 @@ int main(int argc, char **argv) {
 ////////////////////////////////////////////////////////////////////////////////
 void RunBenchmark() {
 	//print test information ...................................................
-	System_err_println("Benchmark Curr: ");
+	/**System_err_println("Benchmark Curr: ");
 	System_err_println("--------------");
 	System_err_println("    numOfThreads:      " + Integer::toString( _gConfiguration._no_of_threads));
 
@@ -206,7 +206,7 @@ void RunBenchmark() {
 	System_err_println("    is_dedicated_mode: " + Integer::toString(_gConfiguration._is_dedicated_mode));
 	System_err_println("    tm_status:         " + Integer::toString(_gConfiguration._tm_status) + (std::string)("   (0=Norm; else View)"));
 	System_err_println("    read_write_delay:  " + Integer::toString(_gConfiguration._is_dedicated_mode));
-
+*/
 	_is_view = (0 != _gConfiguration._tm_status);
 
 	char _sprintf_str[1024];
@@ -307,7 +307,9 @@ void RunBenchmark() {
 	_totalTime = clock() - _totalTime;
 	System_err_println("    ALL threads terminated.");
 	System_err_println("");
-	System_err_println("execution time " + Integer::toString(_totalTime)+"us \n");
+	System_err_println("    Execution time " + Integer::toString(_totalTime)+"us \n");
+	int throughputCalc = (numberOfOperations *  _gConfiguration._no_of_threads * CLOCKS_PER_SEC)/ _totalTime;
+	System_err_println("    Throughput " + Integer::toString(throughputCalc));
 	//calculate threads results ................................................
 	_gResult = 0;
 	_gResultAdd = 0;
