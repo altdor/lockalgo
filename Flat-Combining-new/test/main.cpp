@@ -184,11 +184,11 @@ int main(int argc, char **argv) {
 ////////////////////////////////////////////////////////////////////////////////
 void RunBenchmark() {
 	//print test information ...................................................
-	/**System_err_println("Benchmark Curr: ");
+	System_err_println("Benchmark Curr: ");
 	System_err_println("--------------");
 	System_err_println("    numOfThreads:      " + Integer::toString( _gConfiguration._no_of_threads));
 
-	System_err_println("    Algorithm1 Name:   " + std::string(_gConfiguration._alg1_name));
+	/**System_err_println("    Algorithm1 Name:   " + std::string(_gConfiguration._alg1_name));
 	System_err_println("    Algorithm1 Num:    " + Integer::toString(_gConfiguration._alg1_num));
 	System_err_println("    Algorithm2 Name:   " + std::string(_gConfiguration._alg2_name));
 	System_err_println("    Algorithm2 Num:    " + Integer::toString(_gConfiguration._alg2_num));
