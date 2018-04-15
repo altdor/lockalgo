@@ -182,7 +182,7 @@ int main(int argc, char **argv) {
 ////////////////////////////////////////////////////////////////////////////////
 //HELPER FUNCTIONS
 ////////////////////////////////////////////////////////////////////////////////
-void RunBenchmarkRunBenchmark() {
+void RunBenchmark() {
 	//print test information ...................................................
 	System_err_println("Benchmark Curr: ");
 	System_err_println("--------------");
