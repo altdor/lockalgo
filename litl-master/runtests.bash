@@ -4,11 +4,16 @@ threads='1 2 4 8 16 32 64'
 algorithms='arraylistlock_original mcs_spinlock backoff_original ttas_original'
 numberOfOperations=100000
 
+cd ../Flat-Combining-new &> /dev/null
+make clean &> /dev/null
+make &> /dev/null
+cd - &> /dev/null
+
 cd queue
 rm *.o queuelocktester &> /dev/null
 make &> /dev/null
-
 cd - &> /dev/null
+
 make clean &> /dev/null
 make &> /dev/null
 
@@ -16,11 +21,18 @@ function run(){
 	./lib$j.sh queue/queuelocktester $i $numberOfOperations
 }
 
+function runFC(){
+       cd ../Flat-Combining-new &> /dev/null
+       ./runtest.bash $1 2>&1
+       cd - &> /dev/null
+}
+
 rm results &> /dev/null
 for i in $threads;do
 	for j in $algorithms;do
 		echo "algo: $j, number of threads: $i, $(run)" >> results
 	done
+	echo "algo: Flat Combining, number of threads: $i, $(runFC $i)" >> results
 done
 
 

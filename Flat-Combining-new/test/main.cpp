@@ -109,7 +109,7 @@ public:
 	MixThread (final int inThreadNo) : _threadNo(inThreadNo) {}
 
 	void run() {
-		int i, ran, tmp, j = 0;
+		int i, ran, tmp;
 		time_t t;
 
 		srand((unsigned) time(&t));
@@ -117,7 +117,6 @@ public:
 			ran = rand();
 			if((ran % 2) == 0){
 				_gDS[0]->add(_threadNo,ran);
-				j++;
 			} else{
 				tmp = _gDS[0]->remove(_threadNo,ran);
 			}
@@ -153,13 +152,8 @@ int main(int argc, char **argv) {
 	_gTotalRandNum      = Math::Max(_gConfiguration._capacity, 4*1024*1024);
 	_gThroughputTime    = _gConfiguration._throughput_time;
 
-	//prepare the random numbers ...............................................
-	System_err_println("");
-	System_err_println("    START create random numbers.");
 	PrepareActions();
 	PrepareRandomNumbers(_gTotalRandNum);
-	System_err_println("    END   creating random numbers.");
-	System_err_println("");
 	//System.gc();
 
 	//run the benchmark ........................................................
@@ -183,10 +177,6 @@ int main(int argc, char **argv) {
 //HELPER FUNCTIONS
 ////////////////////////////////////////////////////////////////////////////////
 void RunBenchmark() {
-	//print test information ...................................................
-	System_err_println("Benchmark Curr: ");
-	System_err_println("--------------");
-	System_err_println("    numOfThreads:      " + Integer::toString( _gConfiguration._no_of_threads));
 
 	/**System_err_println("    Algorithm1 Name:   " + std::string(_gConfiguration._alg1_name));
 	System_err_println("    Algorithm1 Num:    " + Integer::toString(_gConfiguration._alg1_num));
@@ -211,10 +201,6 @@ void RunBenchmark() {
 
 	char _sprintf_str[1024];
 	sprintf(_sprintf_str, "%f",  _gConfiguration._load_factor);
-	System_err_println("    loadFactor:        " + (std::string)(_sprintf_str));
-
-	System_err_println("    initialCapacity:   " + Integer::toString(_gConfiguration._capacity));
-	System_err_println("");
 	ITest::_num_post_read_write = _gConfiguration._read_write_delay;
 
 	//create appropriate data-structure ........................................
@@ -249,7 +235,6 @@ void RunBenchmark() {
 	_g_thread_fill_table_size = table_size / _gNumThreads;
 
 	//create benchmark threads .................................................
-	System_err_println("    START creating threads.");
 	_gThreads               =  new Thread*[_gNumThreads];
 	_gThreadResultAry       =  new tick_t[_gNumThreads];
 	memset((void*)_gThreadResultAry, 0, sizeof(int)*_gNumThreads);
@@ -263,10 +248,6 @@ void RunBenchmark() {
 			_gThreads[iThread] =  new MixThread(iThread);
 		}
 	} else {
-		System_err_println("    num_add_threads:    " + Integer::toString(num_add_threads));
-		System_err_println("    num_remove_threads: " + Integer::toString(num_remove_threads));
-		System_err_println("    num_peek_threads:   " + Integer::toString(num_peek_threads));
-
 		int curr_thread=0;
 		for(int iThread = 0; iThread < num_add_threads; ++iThread) {
 			_gThreads[curr_thread] =  new MixThread(curr_thread);
@@ -281,17 +262,13 @@ void RunBenchmark() {
 			++curr_thread;
 		}
 	}
-	System_err_println("    END   creating threads.");
-	System_err_println("");
+
 	Thread::yield();
 	_totalTime = clock();
 	//start the benchmark threads ..............................................
-	System_err_println("    START threads.");
 	for(int iThread = 0; iThread < _gNumThreads; ++iThread) {
 		_gThreads[iThread]->start();
 	}
-	System_err_println("    END START  threads.");
-	System_err_println("");
 
 	//wait the throughput time, and then signal the threads to terminate ...
 	//Thread::yield();
@@ -305,11 +282,8 @@ void RunBenchmark() {
 		_gThreads[iThread]->join();
 	}
 	_totalTime = clock() - _totalTime;
-	System_err_println("    ALL threads terminated.");
-	System_err_println("");
-	System_err_println("    Execution time " + Integer::toString(_totalTime)+"us \n");
 	int throughputCalc = (numberOfOperations *  _gConfiguration._no_of_threads * CLOCKS_PER_SEC)/ _totalTime;
-	System_err_println("    Throughput " + Integer::toString(throughputCalc));
+	System_err_println("Throughput: " + Integer::toString(throughputCalc));
 	//calculate threads results ................................................
 	_gResult = 0;
 	_gResultAdd = 0;
@@ -335,11 +309,6 @@ void RunBenchmark() {
 		}
 	}
 
-	//print benchmark results ..................................................
-	for (int iDb=0; iDb<_num_ds; ++iDb) {
-		System_err_println("    " + std::string(_gDS[iDb]->name()) + " Num elm: " + Integer::toString(_gDS[iDb]->size()));
-	}
-
 	//free resources ...........................................................
 	delete [] _gRandNumAry;
 	delete [] _gThreadResultAry;
@@ -350,10 +319,10 @@ void RunBenchmark() {
 	_gThreads = null;
 
 	//return benchmark results ................................................
-	_gResult         /= (long)(_gEndTime - _gStartTime);
-	_gResultAdd      /= (long)(_gEndTime - _gStartTime);
-	_gResultRemove   /= (long)(_gEndTime - _gStartTime);
-	_gResultPeek     /= (long)(_gEndTime - _gStartTime);
+	//_gResult         /= (long)(_gEndTime - _gStartTime);
+	//_gResultAdd      /= (long)(_gEndTime - _gStartTime);
+	//_gResultRemove   /= (long)(_gEndTime - _gStartTime);
+	//_gResultPeek     /= (long)(_gEndTime - _gStartTime);
 }
 
 ITest* CreateDataStructure(char* final alg_name) {

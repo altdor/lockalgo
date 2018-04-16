@@ -1,11 +1,11 @@
 #!/bin/bash
 
-/usr/sbin/psrset -d 0
-/usr/sbin/psrset -d 1
-/usr/sbin/psrset -d 2
-/usr/sbin/psrset -d 3
-/usr/sbin/psrset -d 4
-/usr/sbin/psrset -c 0-63
+/usr/sbin/psrset -d 0 &> /dev/null
+/usr/sbin/psrset -d 1 &> /dev/null
+/usr/sbin/psrset -d 2 &> /dev/null
+/usr/sbin/psrset -d 3 &> /dev/null
+/usr/sbin/psrset -d 4 &> /dev/null
+/usr/sbin/psrset -c 0-63 &> /dev/null
 
 rm -f results
 rm -f tblResults
@@ -14,12 +14,10 @@ isviewary="0 64 128 192 256 320 384"
 isviewary="0"
 
 percents="50_50"
-threads="1 2 4 8 16 32 64"
+
 algorithms="fcqueue"
 
-
 tests="TIME"
-
 
 capacities="20000"
 
@@ -39,13 +37,11 @@ for percent in $percents; do
 
 for capacity in $capacities; do
 
-for thread in $threads; do
-
 	count=$(($count + 1))
 
-        line="$algorithm 1 non 0 non 0 non 0 $count $thread $percent 0.0 $capacity 10 0 $isview 0"
+        line="$algorithm 1 non 0 non 0 non 0 $count $1 $percent 0.0 $capacity 10 0 $isview 0"
         line=`echo $line | sed 's/_/ /g'`
-        echo "$line" 1>&2
+        echo "$line" &> /dev/null
         echo -n "$line" >> $test
 
         for rep1 in $rep; do
@@ -67,6 +63,6 @@ for thread in $threads; do
         done;
         echo >> $test
 
-done; done; done; done; done; done;
+done; done; done; done; done;
 
 cat results | grep lwp_exit | awk '($3 > 18) && ($5 > 0) {print $3, $5, $6}' > cache_miss.txt
