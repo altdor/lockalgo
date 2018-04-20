@@ -1,0 +1,55 @@
+algo: arraylistlock_original, number of threads: 1, throughput: 15271838 operations/sec
+algo: mcs_spinlock, number of threads: 1, throughput: 12134449 operations/sec
+algo: backoff_original, number of threads: 1, throughput: 14834594 operations/sec
+algo: ttas_original, number of threads: 1, throughput: 19936204 operations/sec
+algo: Flat Combining, number of threads: 1, Throughput: 22089684
+algo: arraylistlock_original, number of threads: 2, throughput: 1897965 operations/sec
+algo: mcs_spinlock, number of threads: 2, throughput: 854171 operations/sec
+algo: backoff_original, number of threads: 2, throughput: 6580679 operations/sec
+algo: ttas_original, number of threads: 2, throughput: 1615613 operations/sec
+algo: Flat Combining, number of threads: 2, Throughput: 14326647
+algo: arraylistlock_original, number of threads: 4, throughput: 886682 operations/sec
+algo: mcs_spinlock, number of threads: 4, throughput: 451632 operations/sec
+algo: backoff_original, number of threads: 4, throughput: 3959141 operations/sec
+algo: ttas_original, number of threads: 4, throughput: 854447 operations/sec
+algo: Flat Combining, number of threads: 4, Throughput: 11124707
+algo: arraylistlock_original, number of threads: 8, throughput: 174744 operations/sec
+algo: mcs_spinlock, number of threads: 8, throughput: 219723 operations/sec
+algo: backoff_original, number of threads: 8, throughput: 1570798 operations/sec
+algo: ttas_original, number of threads: 8, throughput: 262407 operations/sec
+algo: Flat Combining, number of threads: 8, Throughput: 343865
+algo: arraylistlock_original, number of threads: 16, throughput: 91087 operations/sec
+algo: mcs_spinlock, number of threads: 16, throughput: 111944 operations/sec
+algo: backoff_original, number of threads: 16, throughput: 892244 operations/sec
+algo: ttas_original, number of threads: 16, throughput: 158284 operations/sec
+algo: Flat Combining, number of threads: 16, Throughput: 118344
+algo: arraylistlock_original, number of threads: 32, throughput: 36292 operations/sec
+algo: mcs_spinlock, number of threads: 32, throughput: 54081 operations/sec
+algo: backoff_original, number of threads: 32, throughput: 400413 operations/sec
+algo: ttas_original, number of threads: 32, throughput: 55889 operations/sec
+algo: Flat Combining, number of threads: 32, Throughput: 56355
+algo: arraylistlock_original, number of threads: 64, throughput: 15396 operations/sec
+algo: mcs_spinlock, number of threads: 64, throughput: 24222 operations/sec
+algo: backoff_original, number of threads: 64, throughput: 179208 operations/sec
+algo: ttas_original, number of threads: 64, throughput: 27332 operations/sec
+algo: Flat Combining, number of threads: 64, Throughput: 27604
+algo: arraylistlock_original, kmeans Total run time is: 7.031620
+algo: mcs_spinlock, kmeans Total run time is: 6.954046
+algo: backoff_original, kmeans Total run time is: 6.958792
+algo: ttas_original, kmeans Total run time is: 6.903488
+algo: arraylistlock_original, word_count Total run time is: 14.314668
+algo: mcs_spinlock, word_count Total run time is: 14.504365
+algo: backoff_original, word_count Total run time is: 14.432399
+algo: ttas_original, word_count Total run time is: 14.494480
+algo: arraylistlock_original, PCA Total run time is: 0.003721
+algo: mcs_spinlock, PCA Total run time is: 0.004355
+algo: backoff_original, PCA Total run time is: 0.004323
+algo: ttas_original, PCA Total run time is: 0.004376
+algo: arraylistlock_original, linear_regression Total run time is: 2.047960
+algo: mcs_spinlock, linear_regression Total run time is: 2.213086
+algo: backoff_original, linear_regression Total run time is: 2.136595
+algo: ttas_original, linear_regression Total run time is: 2.374826
+algo: arraylistlock_original, string_match Total run time is: 1.662850
+algo: mcs_spinlock, string_match Total run time is: 1.668757
+algo: backoff_original, string_match Total run time is: 1.581670
+algo: ttas_original, string_match Total run time is: 1.759095
